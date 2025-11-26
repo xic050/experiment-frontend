@@ -33,7 +33,6 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
   const [image, setImage] = useState(null);
   const [error, setError] = useState(null);
 
-  // 组件挂载时启动摄像头，卸载时关闭
   useEffect(() => {
     startCamera();
     return () => stopCamera();
@@ -54,7 +53,6 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
       setError(null);
     } catch (err) {
       console.warn("Camera access failed", err);
-      // 如果摄像头失败，不报错阻断，而是允许用户使用上传按钮
     }
   };
 
@@ -91,12 +89,10 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
 
   const retake = () => {
     setImage(null);
-    // 重新启动摄像头
     startCamera();
   };
 
   const confirm = () => {
-    // 确认前先停止摄像头，释放资源
     stopCamera();
     onCapture(image);
   };
@@ -111,13 +107,8 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
       <div className="relative w-full aspect-[3/4] bg-black rounded-2xl overflow-hidden mb-6 shadow-xl group">
           {!image ? (
             <>
-              {/* 视频流 */}
               <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover transform -scale-x-100" />
-              
-              {/* 状态提示 */}
               {!stream && !error && <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">正在启动摄像头...</div>}
-
-              {/* 轮廓遮罩 */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-50">
                  <svg viewBox="0 0 100 100" className="w-2/3 h-2/3 text-white border-2 border-dashed border-white rounded-full">
                     <path d="M50,10 C30,10 15,25 15,45 C15,60 25,70 30,75 C10,85 0,100 0,100 L100,100 C100,100 90,85 70,75 C75,70 85,60 85,45 C85,25 70,10 50,10 Z" fill="none" stroke="white" strokeWidth="1" strokeDasharray="4"/>
@@ -125,25 +116,9 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
                  <p className="absolute bottom-10 text-white text-sm font-bold bg-black/50 px-3 py-1 rounded">请将面部对准轮廓</p>
               </div>
               <canvas ref={canvasRef} className="hidden" />
-              
-              {/* 拍照按钮 */}
-              <button 
-                onClick={takePhoto} 
-                className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-slate-200 flex items-center justify-center hover:bg-slate-100 transition shadow-lg z-10"
-                title="拍照"
-              >
-                <Camera className="text-slate-800" size={32} />
-              </button>
-
-              {/* 上传文件按钮 */}
+              <button onClick={takePhoto} className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-slate-200 flex items-center justify-center hover:bg-slate-100 transition shadow-lg z-10" title="拍照"><Camera className="text-slate-800" size={32} /></button>
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-              <button 
-                onClick={() => fileInputRef.current.click()}
-                className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition pointer-events-auto"
-                title="上传本地照片"
-              >
-                <UploadCloud size={20} />
-              </button>
+              <button onClick={() => fileInputRef.current.click()} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition pointer-events-auto" title="上传本地照片"><UploadCloud size={20} /></button>
             </>
           ) : (
             <>
@@ -160,56 +135,52 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
 };
 
 export default function App() {
-  // --- 状态管理 ---
   const [phase, setPhase] = useState('gender_select'); 
-  
   const [selfGender, setSelfGender] = useState('male');
   const [partnerGender, setPartnerGender] = useState('female');
   const [selfPhoto, setSelfPhoto] = useState(null);
   const [partnerPhoto, setPartnerPhoto] = useState(null);
-  
   const [userProfileText, setUserProfileText] = useState('');
   const [questionnaireAnswers, setQuestionnaireAnswers] = useState({});
-  
   const [currentTrialIndex, setCurrentTrialIndex] = useState(0);
   const [trialStep, setTrialStep] = useState('card'); 
   const [trialStartTime, setTrialStartTime] = useState(0);
   const [data, setData] = useState([]);
   const [stimuli, setStimuli] = useState([]); 
-  
   const [currentTrialData, setCurrentTrialData] = useState({});
   const [ratingDesirability, setRatingDesirability] = useState(4); 
   const [ratingWillingness, setRatingWillingness] = useState(4);   
   const [saveStatus, setSaveStatus] = useState('idle'); 
   const [isDemoMode, setIsDemoMode] = useState(false); 
+  const [profileTimer, setProfileTimer] = useState(120); // 120秒倒计时
 
-  // 新增：Profile 页面倒计时状态 (120秒 = 2分钟)
-  const [profileTimer, setProfileTimer] = useState(60);
+  // 1. 定义一个 ref 来控制滚动容器
+  const scrollContainerRef = useRef(null);
 
-  // --- 处理逻辑 ---
+  // 2. 监听 phase 变化，强制滚动到顶部
+  useEffect(() => {
+    // 滚动整个窗口到顶部
+    window.scrollTo(0, 0);
+    // 如果当前有滚动的容器，也将其内部滚动到顶部
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+  }, [phase]);
 
-  const handleGenderConfirm = () => {
-    setPhase('upload_self');
-  };
+  const handleGenderConfirm = () => { setPhase('upload_self'); };
 
   const handleSelfCapture = (imgData) => {
     if (!imgData) return;
     setSelfPhoto(imgData);
-    // 稍微延迟一下状态切换，给用户一点视觉反馈时间
-    setTimeout(() => {
-        setPhase('upload_partner');
-    }, 100);
+    setTimeout(() => { setPhase('upload_partner'); }, 100);
   };
 
   const handlePartnerCapture = (imgData) => {
     if (!imgData) return;
     setPartnerPhoto(imgData);
-    setTimeout(() => {
-        setPhase('processing');
-    }, 100);
+    setTimeout(() => { setPhase('processing'); }, 100);
   };
 
-  // 倒计时逻辑
   useEffect(() => {
     let interval;
     if (phase === 'profile' && profileTimer > 0) {
@@ -223,36 +194,9 @@ export default function App() {
   const generateMockData = () => {
     const mockStimuli = [];
     let idCounter = 1;
-    // 12 Self Morphs
-    for(let i=0; i<12; i++) {
-        mockStimuli.push({
-            id: `mock_self_${idCounter++}`,
-            url: `https://api.dicebear.com/7.x/avataaars/svg?seed=self${i}&backgroundColor=e5e7eb`,
-            type: 'self_morph',
-            ratio_self: (i % 6) * 0.2, 
-            description: `Self Morph ${(i%6)*20}% (Demo)`
-        });
-    }
-    // 12 Partner Morphs
-    for(let i=0; i<12; i++) {
-        mockStimuli.push({
-            id: `mock_partner_${idCounter++}`,
-            url: `https://api.dicebear.com/7.x/avataaars/svg?seed=partner${i}&backgroundColor=b6e3f4`,
-            type: 'partner_morph',
-            ratio_partner: (i % 6) * 0.2,
-            description: `Partner Morph ${(i%6)*20}% (Demo)`
-        });
-    }
-    // 12 Random
-    for(let i=0; i<12; i++) {
-        mockStimuli.push({
-            id: `mock_random_${idCounter++}`,
-            url: `https://api.dicebear.com/7.x/avataaars/svg?seed=random${i}&backgroundColor=ffdfd2`,
-            type: 'random_opposite',
-            ratio_self: 0,
-            description: `Random Face (Demo)`
-        });
-    }
+    for(let i=0; i<12; i++) { mockStimuli.push({ id: `mock_self_${idCounter++}`, url: `https://api.dicebear.com/7.x/avataaars/svg?seed=self${i}`, type: 'self_morph', ratio_self: (i % 6) * 0.2, description: `Self Morph ${(i%6)*20}% (Demo)` }); }
+    for(let i=0; i<12; i++) { mockStimuli.push({ id: `mock_partner_${idCounter++}`, url: `https://api.dicebear.com/7.x/avataaars/svg?seed=partner${i}`, type: 'partner_morph', ratio_partner: (i % 6) * 0.2, description: `Partner Morph ${(i%6)*20}% (Demo)` }); }
+    for(let i=0; i<12; i++) { mockStimuli.push({ id: `mock_random_${idCounter++}`, url: `https://api.dicebear.com/7.x/avataaars/svg?seed=random${i}`, type: 'random_opposite', ratio_self: 0, description: `Random Face (Demo)` }); }
     return mockStimuli.sort(() => Math.random() - 0.5);
   };
 
@@ -260,10 +204,10 @@ export default function App() {
     if (phase === 'processing') {
       const processImages = async () => {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const timeoutId = setTimeout(() => controller.abort(), 40000);
 
         try {
-          console.log("Attempting to connect to backend:", API_BASE_URL);
+          console.log("Connecting to:", API_BASE_URL);
           const response = await fetch(`${API_BASE_URL}/merge_faces`, {
             method: 'POST',
             headers: { 
@@ -278,26 +222,17 @@ export default function App() {
             }),
             signal: controller.signal
           });
-          
           clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
-          }
-          
+          if (!response.ok) throw new Error(`Server status: ${response.status}`);
           const result = await response.json();
           setStimuli(result.images);
           setPhase('instructions');
-
         } catch (error) {
           clearTimeout(timeoutId);
-          console.warn("Backend connection failed, switching to DEMO MODE.", error);
+          console.warn("Backend failed:", error);
           setIsDemoMode(true);
           const mockData = generateMockData();
-          setTimeout(() => {
-            setStimuli(mockData);
-            setPhase('instructions');
-          }, 2000);
+          setTimeout(() => { setStimuli(mockData); setPhase('instructions'); }, 2000);
         }
       };
       processImages();
@@ -305,9 +240,7 @@ export default function App() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase === 'experiment' && trialStep === 'card') {
-      setTrialStartTime(performance.now());
-    }
+    if (phase === 'experiment' && trialStep === 'card') setTrialStartTime(performance.now());
   }, [phase, trialStep, currentTrialIndex]);
 
   const saveDataToServer = async () => {
@@ -320,47 +253,31 @@ export default function App() {
       experiment_data: data,
       mode: isDemoMode ? 'demo' : 'production'
     };
-
     try {
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `experiment_data_${isDemoMode ? 'DEMO' : 'REAL'}.json`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    } catch (e) {
-      console.error("Local download failed", e);
-    }
+    } catch (e) { console.error(e); }
 
-    if (isDemoMode) {
-        setSaveStatus('saved'); 
-        return;
-    }
+    if (isDemoMode) { setSaveStatus('saved'); return; }
 
     try {
       const response = await fetch(`${API_BASE_URL}/save_data`, {
          method: 'POST',
-         headers: { 
-           'Content-Type': 'application/json',
-           'ngrok-skip-browser-warning': 'true' 
-         },
+         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
          body: JSON.stringify(exportData)
       });
-      if(response.ok) setSaveStatus('saved');
-      else throw new Error('Upload failed');
-    } catch (e) {
-      console.error(e);
-      setSaveStatus('error');
-    }
+      if(response.ok) setSaveStatus('saved'); else throw new Error('Upload failed');
+    } catch (e) { console.error(e); setSaveStatus('error'); }
   };
-
-  // --- 界面渲染 ---
 
   if (phase === 'gender_select') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
           <h1 className="text-2xl font-bold text-center mb-6">基本信息确认</h1>
-          
           <div className="mb-6">
             <label className="block text-sm font-bold text-slate-700 mb-2">您的性别</label>
             <div className="flex gap-4">
@@ -368,7 +285,6 @@ export default function App() {
               <button onClick={() => setSelfGender('female')} className={`flex-1 py-3 rounded-lg border-2 ${selfGender === 'female' ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>女</button>
             </div>
           </div>
-
           <div className="mb-8">
             <label className="block text-sm font-bold text-slate-700 mb-2">伴侣性别 (或期望对象)</label>
              <div className="flex gap-4">
@@ -376,10 +292,7 @@ export default function App() {
               <button onClick={() => setPartnerGender('female')} className={`flex-1 py-3 rounded-lg border-2 ${partnerGender === 'female' ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>女</button>
             </div>
           </div>
-
-          <button onClick={handleGenderConfirm} className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition">
-            下一步：上传照片
-          </button>
+          <button onClick={handleGenderConfirm} className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition">下一步：上传照片</button>
         </div>
       </div>
     );
@@ -390,12 +303,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="w-full bg-white p-6 rounded-2xl shadow-xl">
            <div className="flex justify-center mb-4"><div className="w-full h-2 bg-slate-100 rounded-full"><div className="h-full bg-rose-500 w-1/3"></div></div></div>
-           <CameraCapture 
-             key="capture-self" // 关键修改：添加 key
-             label="步骤 1/2: 拍摄您的照片" 
-             instruction="请确保面部清晰，光线充足。如果摄像头无法使用，可点击右上角图标上传照片。" 
-             onCapture={handleSelfCapture} 
-           />
+           <CameraCapture key="capture-self" label="步骤 1/2: 拍摄您的照片" instruction="请确保面部清晰，光线充足。如果摄像头无法使用，可点击右上角图标上传照片。" onCapture={handleSelfCapture} />
         </div>
       </div>
     );
@@ -406,12 +314,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="w-full bg-white p-6 rounded-2xl shadow-xl">
            <div className="flex justify-center mb-4"><div className="w-full h-2 bg-slate-100 rounded-full"><div className="h-full bg-rose-500 w-2/3"></div></div></div>
-           <CameraCapture 
-             key="capture-partner" // 关键修改：添加 key
-             label="步骤 2/2: 拍摄伴侣的照片" 
-             instruction="若无伴侣在旁，可翻拍照片或上传现成照片。" 
-             onCapture={handlePartnerCapture} 
-           />
+           <CameraCapture key="capture-partner" label="步骤 2/2: 拍摄伴侣的照片" instruction="若无伴侣在旁，可翻拍照片或上传现成照片。" onCapture={handlePartnerCapture} />
         </div>
       </div>
     );
@@ -430,8 +333,6 @@ export default function App() {
     );
   }
 
-  // ... (其余部分保持不变，包括 instructions, profile, questionnaire, experiment, finish)
-  
   if (phase === 'instructions') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
@@ -440,10 +341,7 @@ export default function App() {
           {isDemoMode && (
             <div className="bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-xl mb-6 text-sm flex items-start gap-2">
               <AlertCircle size={20} className="shrink-0 mt-0.5"/>
-              <div>
-                <strong>演示模式已启动</strong>
-                <p>后端连接超时或被拦截（403），当前使用模拟数据。如果这是预期外的，请检查 Ngrok 状态。</p>
-              </div>
+              <div><strong>演示模式已启动</strong><p>后端连接超时或被拦截（403），当前使用模拟数据。如果这是预期外的，请检查 Ngrok 状态。</p></div>
             </div>
           )}
           <p className="text-slate-600 mb-6 text-sm">系统已准备好 36 张潜在匹配对象。包含不同程度的相似面孔。请凭直觉操作。</p>
@@ -453,87 +351,33 @@ export default function App() {
     );
   }
 
-  // --- 修改后的 Profile 页面 ---
   if (phase === 'profile') {
      const minutes = Math.floor(profileTimer / 60);
      const seconds = profileTimer % 60;
-
      return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-          {/* 顶部标题栏 */}
+        {/* 3. 给 profile 的容器也加上 ref，防止奇怪的滚动继承 */}
+        <div ref={scrollContainerRef} className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
           <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-            <div className="p-3 bg-rose-100 rounded-full text-rose-500">
-               <Heart size={24} fill="currentColor" />
-            </div>
+            <div className="p-3 bg-rose-100 rounded-full text-rose-500"><Heart size={24} fill="currentColor" /></div>
             <h2 className="text-2xl font-bold text-slate-800">Relationship Reflection</h2>
           </div>
-          
-          {/* 优化的文本内容 */}
           <div className="text-slate-600 space-y-4 mb-8 text-sm leading-relaxed text-justify">
-            <p>
-              To improve your relationship quality, science has proven that the following method can be very helpful. 
-              <span className="font-semibold text-rose-600 block mt-1">Let's give it a try!</span>
-            </p>
-            
+            <p>To improve your relationship quality, science has proven that the following method can be very helpful. <span className="font-semibold text-rose-600 block mt-1">Let's give it a try!</span></p>
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <p className="mb-2">
-                  Please take time to think carefully about a <strong>close relationship</strong> in which you find it easy to feel close to the other person and are comfortable relying on them. 
-                </p>
-                <p>
-                  This person you are thinking about should be someone who is <strong>always there for you</strong> when you are in need.
-                </p>
+                <p className="mb-2">Please take time to think carefully about a <strong>close relationship</strong> in which you find it easy to feel close to the other person and are comfortable relying on them. </p>
+                <p>This person you are thinking about should be someone who is <strong>always there for you</strong> when you are in need.</p>
             </div>
-
-            <p>
-              You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.
-            </p>
-
-            <p>
-              Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.
-            </p>
-
-            <p>  
-              Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed.
-            </p>
-
+            <p>You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.</p>
+            <p>Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.</p>
+            <p>Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed.</p>
           </div>
-
-          {/* 输入框区域 */}
           <div className="mb-6">
-            <label className="block text-slate-700 font-bold mb-2 flex items-center gap-2">
-                Your Reflection:
-                {profileTimer > 0 && <span className="text-xs font-normal text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full flex items-center gap-1"><Clock size={12}/> Time remaining: {minutes}:{seconds.toString().padStart(2, '0')}</span>}
-            </label>
-            <textarea 
-                className="w-full border border-slate-300 rounded-xl p-4 h-48 focus:ring-2 focus:ring-rose-500 focus:outline-none transition-all resize-none text-sm leading-relaxed" 
-                placeholder="There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed." 
-                value={userProfileText} 
-                onChange={e=>setUserProfileText(e.target.value)} 
-            />
+            <label className="block text-slate-700 font-bold mb-2 flex items-center gap-2">Your Reflection: {profileTimer > 0 && <span className="text-xs font-normal text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full flex items-center gap-1"><Clock size={12}/> Time remaining: {minutes}:{seconds.toString().padStart(2, '0')}</span>}</label>
+            <textarea className="w-full border border-slate-300 rounded-xl p-4 h-48 focus:ring-2 focus:ring-rose-500 focus:outline-none transition-all resize-none text-sm leading-relaxed" placeholder="There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed." value={userProfileText} onChange={e=>setUserProfileText(e.target.value)} />
           </div>
-          
-          {/* 带倒计时的按钮 */}
-          <button 
-            disabled={profileTimer > 0} 
-            onClick={() => setPhase('questionnaire')} 
-            className={`w-full font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-                profileTimer > 0 
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
-                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-            }`}
-          >
-            {profileTimer > 0 ? (
-                <>
-                   <Loader2 className="animate-spin" size={20} />
-                   <span>Please reflect & write ({minutes}:{seconds.toString().padStart(2, '0')})</span>
-                </>
-            ) : (
-                <>
-                    <span>Next Step</span>
-                    <ArrowRight size={20} />
-                </>
-            )}
+          <button disabled={profileTimer > 0} onClick={() => setPhase('questionnaire')} className={`w-full font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${profileTimer > 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'}`}>
+            {profileTimer > 0 ? <><Loader2 className="animate-spin" size={20} /><span>Please reflect & write ({minutes}:{seconds.toString().padStart(2, '0')})</span></> : <><span>Next Step</span><ArrowRight size={20} /></>}
           </button>
         </div>
       </div>
@@ -544,7 +388,8 @@ export default function App() {
     const isComplete = Object.keys(questionnaireAnswers).length === PRE_QUESTIONS.length;
     return (
       <div className="min-h-screen bg-slate-50 p-6 flex justify-center">
-        <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md overflow-y-auto max-h-screen">
+        {/* 4. 关键修复：将 scrollContainerRef 绑定到这个滚动容器上 */}
+        <div ref={scrollContainerRef} className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md overflow-y-auto max-h-[90vh]">
            <h2 className="text-xl font-bold mb-4">Ratings</h2>
            {PRE_QUESTIONS.map((q, idx) => (
               <div key={idx} className="mb-4 text-sm">
@@ -566,11 +411,8 @@ export default function App() {
       stimulus_id: stim.id,
       stimulus_type: stim.type, 
       ratio_level: stim.ratio_self || stim.ratio_partner || 0,
-      
-      // 新增：记录后端返回的图片来源信息
-      source_db_image: stim.source_db,       // 记录这是哪张数据库图片
-      source_upload_image: stim.source_upload, // 记录这是哪张上传图片
-
+      source_db_image: stim.source_db,
+      source_upload_image: stim.source_upload,
       action: action,
       reaction_time_ms: Math.round(rt),
     });
@@ -580,7 +422,6 @@ export default function App() {
   const handleRatingSubmit = () => {
     const completeData = { ...currentTrialData, rating_desirability: ratingDesirability, rating_willingness: ratingWillingness };
     setData([...data, completeData]);
-
     if (currentTrialIndex < stimuli.length - 1) {
       setCurrentTrialIndex(prev => prev + 1);
       setTrialStep('card');
@@ -628,18 +469,13 @@ export default function App() {
          <CheckCircle size={64} className="text-green-500 mx-auto mb-6" />
          <h2 className="text-2xl font-bold mb-4">实验结束</h2>
          <p className="text-slate-500 mb-6">感谢您的参与。数据已自动记录。</p>
-         
-         {saveStatus === 'idle' && (
-           <button onClick={saveDataToServer} className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mb-4">保存数据 (下载到本地)</button>
-         )}
+         {saveStatus === 'idle' && ( <button onClick={saveDataToServer} className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mb-4">保存数据 (下载到本地)</button> )}
          {saveStatus === 'saving' && <div className="text-slate-500 animate-pulse">正在处理数据...</div>}
          {saveStatus === 'saved' && <div className="text-green-600 font-bold mb-4">数据已成功保存！文件已下载。</div>}
          {saveStatus === 'error' && <div className="text-red-500 font-bold mb-4">保存失败，请重试。</div>}
-         
          {isDemoMode && <p className="text-xs text-amber-500 mt-4">* 当前为演示模式，数据仅保存在本地，未上传至服务器。</p>}
       </div>
     );
   }
-
   return null;
 }
