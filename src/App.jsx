@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, X, Star, User, ArrowRight, Download, CheckCircle, Loader2, Camera, RefreshCw, Check, UploadCloud, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Heart, X, Star, User, ArrowRight, Download, CheckCircle, Loader2, Camera, RefreshCw, Check, UploadCloud, AlertCircle, Image as ImageIcon, Clock } from 'lucide-react';
 
 // --- 配置 ---
 // Ngrok 地址 (每次重启 Ngrok 记得更新这里)
@@ -183,6 +183,9 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState('idle'); 
   const [isDemoMode, setIsDemoMode] = useState(false); 
 
+  // 新增：Profile 页面倒计时状态 (120秒 = 2分钟)
+  const [profileTimer, setProfileTimer] = useState(120);
+
   // --- 处理逻辑 ---
 
   const handleGenderConfirm = () => {
@@ -205,6 +208,17 @@ export default function App() {
         setPhase('processing');
     }, 100);
   };
+
+  // 倒计时逻辑
+  useEffect(() => {
+    let interval;
+    if (phase === 'profile' && profileTimer > 0) {
+      interval = setInterval(() => {
+        setProfileTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [phase, profileTimer]);
 
   const generateMockData = () => {
     const mockStimuli = [];
@@ -439,21 +453,88 @@ export default function App() {
     );
   }
 
+  // --- 修改后的 Profile 页面 ---
   if (phase === 'profile') {
+     const minutes = Math.floor(profileTimer / 60);
+     const seconds = profileTimer % 60;
+
      return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-          <h2 className="text-xl font-bold mb-4">To improve your relationship quality, science has proven that the following method can be very helpful. Let's give it a try！！
-Please take time to think carefully about a close relationship in which you find it easy to feel close to the other person and are comfortable relying on them. This person you are thinking about should be someone who is always there for you when you are in need.
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
+          {/* 顶部标题栏 */}
+          <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+            <div className="p-3 bg-rose-100 rounded-full text-rose-500">
+               <Heart size={24} fill="currentColor" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800">Relationship Reflection</h2>
+          </div>
+          
+          {/* 优化的文本内容 */}
+          <div className="text-slate-600 space-y-4 mb-8 text-sm leading-relaxed text-justify">
+            <p>
+              To improve your relationship quality, science has proven that the following method can be very helpful. 
+              <span className="font-semibold text-rose-600 block mt-1">Let's give it a try!</span>
+            </p>
+            
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <p className="mb-2">
+                  Please take time to think carefully about a <strong>close relationship</strong> in which you find it easy to feel close to the other person and are comfortable relying on them. 
+                </p>
+                <p>
+                  This person you are thinking about should be someone who is <strong>always there for you</strong> when you are in need.
+                </p>
+            </div>
 
-You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.
+            <p>
+              You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.
+            </p>
 
-Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.</h2>
-          <textarea className="w-full border p-3 h-32 mb-6 rounded-lg" placeholder="
+            <p>
+              Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.
+            </p>
 
+            <p>  
+              Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed.
+            </p>
 
-Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed with a 10-minute countdown timer." value={userProfileText} onChange={e=>setUserProfileText(e.target.value)} />
-          <button onClick={() => setPhase('questionnaire')} className="w-full bg-rose-500 text-white font-bold py-3 rounded-xl">下一步</button>
+          </div>
+
+          {/* 输入框区域 */}
+          <div className="mb-6">
+            <label className="block text-slate-700 font-bold mb-2 flex items-center gap-2">
+                Your Reflection:
+                {profileTimer > 0 && <span className="text-xs font-normal text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full flex items-center gap-1"><Clock size={12}/> Time remaining: {minutes}:{seconds.toString().padStart(2, '0')}</span>}
+            </label>
+            <textarea 
+                className="w-full border border-slate-300 rounded-xl p-4 h-48 focus:ring-2 focus:ring-rose-500 focus:outline-none transition-all resize-none text-sm leading-relaxed" 
+                placeholder="There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed." 
+                value={userProfileText} 
+                onChange={e=>setUserProfileText(e.target.value)} 
+            />
+          </div>
+          
+          {/* 带倒计时的按钮 */}
+          <button 
+            disabled={profileTimer > 0} 
+            onClick={() => setPhase('questionnaire')} 
+            className={`w-full font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                profileTimer > 0 
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+            }`}
+          >
+            {profileTimer > 0 ? (
+                <>
+                   <Loader2 className="animate-spin" size={20} />
+                   <span>Please reflect & write ({minutes}:{seconds.toString().padStart(2, '0')})</span>
+                </>
+            ) : (
+                <>
+                    <span>Next Step</span>
+                    <ArrowRight size={20} />
+                </>
+            )}
+          </button>
         </div>
       </div>
      );
