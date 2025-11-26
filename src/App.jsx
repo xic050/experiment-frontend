@@ -152,7 +152,7 @@ export default function App() {
   const [ratingWillingness, setRatingWillingness] = useState(4);   
   const [saveStatus, setSaveStatus] = useState('idle'); 
   const [isDemoMode, setIsDemoMode] = useState(false); 
-  const [profileTimer, setProfileTimer] = useState(120); // 120秒倒计时
+  const [profileTimer, setProfileTimer] = useState(30); // 30秒倒计时
 
   // 1. 定义一个 ref 来控制滚动容器
   const scrollContainerRef = useRef(null);
