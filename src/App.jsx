@@ -184,7 +184,7 @@ export default function App() {
   const [isDemoMode, setIsDemoMode] = useState(false); 
 
   // 新增：Profile 页面倒计时状态 (120秒 = 2分钟)
-  const [profileTimer, setProfileTimer] = useState(120);
+  const [profileTimer, setProfileTimer] = useState(60);
 
   // --- 处理逻辑 ---
 
@@ -566,6 +566,11 @@ export default function App() {
       stimulus_id: stim.id,
       stimulus_type: stim.type, 
       ratio_level: stim.ratio_self || stim.ratio_partner || 0,
+      
+      // 新增：记录后端返回的图片来源信息
+      source_db_image: stim.source_db,       // 记录这是哪张数据库图片
+      source_upload_image: stim.source_upload, // 记录这是哪张上传图片
+
       action: action,
       reaction_time_ms: Math.round(rt),
     });
