@@ -6,13 +6,22 @@ import { Heart, X, Star, User, ArrowRight, Download, CheckCircle, Loader2, Camer
 const API_BASE_URL = 'https://betty-unhoneyed-fred.ngrok-free.dev'; 
 
 const PRE_QUESTIONS = [
-  "我通常很容易信任陌生人。",
-  "我对他人的情绪变化很敏感。",
-  "我喜欢在社交场合结识新朋友。",
-  "我认为外表在择偶中很重要。",
-  "我很容易感到孤独。",
-  "我愿意为了寻找伴侣付出很多努力。",
-  "我相信一见钟情。"
+  "comforted",
+  "supported",
+  "looked after",
+  "careed for",
+  "secure",
+  "safe",
+  "protected",
+  "unthreatened",
+  "better abour myself",
+    "valued",
+    "more positive abour myself",
+    "I really like myself",
+    "loved",
+    "cherished",
+    "treasured",
+    "adored",
 ];
 
 // --- 摄像头组件 (含文件上传功能) ---
@@ -434,8 +443,16 @@ export default function App() {
      return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-          <h2 className="text-xl font-bold mb-4">个人简介</h2>
-          <textarea className="w-full border p-3 h-32 mb-6 rounded-lg" placeholder="介绍一下你自己..." value={userProfileText} onChange={e=>setUserProfileText(e.target.value)} />
+          <h2 className="text-xl font-bold mb-4">To improve your relationship quality, science has proven that the following method can be very helpful. Let's give it a try！！
+Please take time to think carefully about a close relationship in which you find it easy to feel close to the other person and are comfortable relying on them. This person you are thinking about should be someone who is always there for you when you are in need.
+
+You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.
+
+Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.</h2>
+          <textarea className="w-full border p-3 h-32 mb-6 rounded-lg" placeholder="
+
+
+Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed with a 10-minute countdown timer." value={userProfileText} onChange={e=>setUserProfileText(e.target.value)} />
           <button onClick={() => setPhase('questionnaire')} className="w-full bg-rose-500 text-white font-bold py-3 rounded-xl">下一步</button>
         </div>
       </div>
@@ -447,7 +464,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 p-6 flex justify-center">
         <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md overflow-y-auto max-h-screen">
-           <h2 className="text-xl font-bold mb-4">心理评定</h2>
+           <h2 className="text-xl font-bold mb-4">Ratings</h2>
            {PRE_QUESTIONS.map((q, idx) => (
               <div key={idx} className="mb-4 text-sm">
                 <p className="mb-2">{idx + 1}. {q}</p>
@@ -510,9 +527,9 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-           <h2 className="text-xl font-bold text-center mb-6">您的评价？</h2>
-           <div className="mb-6"><label className="block mb-2 font-bold text-slate-700">吸引力: {ratingDesirability}</label><input type="range" min="1" max="7" value={ratingDesirability} onChange={e => setRatingDesirability(Number(e.target.value))} className="w-full accent-rose-500" /></div>
-           <div className="mb-8"><label className="block mb-2 font-bold text-slate-700">约会意愿: {ratingWillingness}</label><input type="range" min="1" max="7" value={ratingWillingness} onChange={e => setRatingWillingness(Number(e.target.value))} className="w-full accent-rose-500" /></div>
+           <h2 className="text-xl font-bold text-center mb-6">How do you think about him/her？</h2>
+           <div className="mb-6"><label className="block mb-2 font-bold text-slate-700">desirebility: {ratingDesirability}</label><input type="range" min="1" max="7" value={ratingDesirability} onChange={e => setRatingDesirability(Number(e.target.value))} className="w-full accent-rose-500" /></div>
+           <div className="mb-8"><label className="block mb-2 font-bold text-slate-700">willingness to dating: {ratingWillingness}</label><input type="range" min="1" max="7" value={ratingWillingness} onChange={e => setRatingWillingness(Number(e.target.value))} className="w-full accent-rose-500" /></div>
            <button onClick={handleRatingSubmit} className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl">确认</button>
         </div>
       </div>
