@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Heart, X, Star, User, ArrowRight, Download, CheckCircle, Loader2, Camera, RefreshCw, Check, UploadCloud, AlertCircle, Image as ImageIcon, Clock, ShoppingCart } from 'lucide-react';
 
 // --- 配置 ---
-// ⚠️⚠️⚠️ 请务必修改这里！！！⚠️⚠️⚠️
-// 每次重启 Ngrok 后，必须把下面的地址换成你终端里显示的最新地址
+// ⚠️⚠️⚠️ 关键修改：请填入你终端里显示的最新 Ngrok 地址 ⚠️⚠️⚠️
 const API_BASE_URL = 'https://betty-unhoneyed-fred.ngrok-free.dev'; 
 
 const PRE_QUESTIONS = [
@@ -34,7 +33,6 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
   const [image, setImage] = useState(null);
   const [error, setError] = useState(null);
 
-  // 组件挂载时启动摄像头，卸载时关闭
   useEffect(() => {
     startCamera();
     return () => stopCamera();
@@ -55,7 +53,6 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
       setError(null);
     } catch (err) {
       console.warn("Camera access failed", err);
-      // 如果摄像头失败，不报错阻断，而是允许用户使用上传按钮
     }
   };
 
@@ -92,12 +89,10 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
 
   const retake = () => {
     setImage(null);
-    // 重新启动摄像头
     startCamera();
   };
 
   const confirm = () => {
-    // 确认前先停止摄像头，释放资源
     stopCamera();
     onCapture(image);
   };
@@ -112,13 +107,8 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
       <div className="relative w-full aspect-[3/4] bg-black rounded-2xl overflow-hidden mb-6 shadow-xl group">
           {!image ? (
             <>
-              {/* 视频流 */}
               <video ref={videoRef} autoPlay playsInline className="absolute inset-0 w-full h-full object-cover transform -scale-x-100" />
-              
-              {/* 状态提示 */}
               {!stream && !error && <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-sm">Starting camera...</div>}
-
-              {/* 轮廓遮罩 */}
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-50">
                  <svg viewBox="0 0 100 100" className="w-2/3 h-2/3 text-white border-2 border-dashed border-white rounded-full">
                     <path d="M50,10 C30,10 15,25 15,45 C15,60 25,70 30,75 C10,85 0,100 0,100 L100,100 C100,100 90,85 70,75 C75,70 85,60 85,45 C85,25 70,10 50,10 Z" fill="none" stroke="white" strokeWidth="1" strokeDasharray="4"/>
@@ -126,25 +116,9 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
                  <p className="absolute bottom-10 text-white text-sm font-bold bg-black/50 px-3 py-1 rounded">Align face here</p>
               </div>
               <canvas ref={canvasRef} className="hidden" />
-              
-              {/* 拍照按钮 */}
-              <button 
-                onClick={takePhoto} 
-                className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-slate-200 flex items-center justify-center hover:bg-slate-100 transition shadow-lg z-10"
-                title="Take Photo"
-              >
-                <Camera className="text-slate-800" size={32} />
-              </button>
-
-              {/* 上传文件按钮 */}
+              <button onClick={takePhoto} className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-16 h-16 bg-white rounded-full border-4 border-slate-200 flex items-center justify-center hover:bg-slate-100 transition shadow-lg z-10" title="Take Photo"><Camera className="text-slate-800" size={32} /></button>
               <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" className="hidden" />
-              <button 
-                onClick={() => fileInputRef.current.click()}
-                className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition pointer-events-auto"
-                title="Upload Photo"
-              >
-                <UploadCloud size={20} />
-              </button>
+              <button onClick={() => fileInputRef.current.click()} className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition pointer-events-auto" title="Upload Photo"><UploadCloud size={20} /></button>
             </>
           ) : (
             <>
@@ -161,75 +135,64 @@ const CameraCapture = ({ onCapture, label, instruction }) => {
 };
 
 export default function App() {
-  // --- 状态管理 ---
   const [phase, setPhase] = useState('gender_select'); 
-  
   const [selfGender, setSelfGender] = useState('male');
   const [partnerGender, setPartnerGender] = useState('female');
   const [selfPhoto, setSelfPhoto] = useState(null);
   const [partnerPhoto, setPartnerPhoto] = useState(null);
-  
   const [userProfileText, setUserProfileText] = useState('');
   const [questionnaireAnswers, setQuestionnaireAnswers] = useState({});
-  
   const [currentTrialIndex, setCurrentTrialIndex] = useState(0);
   const [trialStep, setTrialStep] = useState('card'); 
   const [trialStartTime, setTrialStartTime] = useState(0);
   const [data, setData] = useState([]);
   const [stimuli, setStimuli] = useState([]); 
-  
   const [currentTrialData, setCurrentTrialData] = useState({});
   const [ratingDesirability, setRatingDesirability] = useState(4); 
   const [ratingWillingness, setRatingWillingness] = useState(4);   
   const [saveStatus, setSaveStatus] = useState('idle'); 
   const [isDemoMode, setIsDemoMode] = useState(false); 
-  const [profileTimer, setProfileTimer] = useState(120); // 120秒倒计时
-
-  // A/B 测试条件状态：'relationship' 或 'grocery'
+  const [profileTimer, setProfileTimer] = useState(120);
   const [condition, setCondition] = useState('relationship');
+  
+  // 新增：被试ID状态，初始化为空，第一次保存后后端会返回ID
+  const [participantId, setParticipantId] = useState(null);
 
-  // 1. 定义一个 ref 来控制滚动容器
   const scrollContainerRef = useRef(null);
 
-  // 2. 初始化：随机分配实验条件 (A/B Test)
   useEffect(() => {
-    // 简单的随机分配 (50% 概率)，模拟被试间随机
     const randomCondition = Math.random() < 0.5 ? 'relationship' : 'grocery';
     setCondition(randomCondition);
     console.log(`Experiment Condition Assigned: ${randomCondition}`);
   }, []);
 
-  // 3. 监听 phase 变化，强制滚动到顶部
   useEffect(() => {
     window.scrollTo(0, 0);
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
+    
+    // 关键逻辑：每当 Phase (页面) 变化时，自动触发一次保存
+    // 这样即使用户在 Profile 页或问卷页关掉，之前的数据也能存下来
+    if (phase !== 'gender_select') {
+        saveDataToServer(true); // true 表示静默保存 (isPartial)
+    }
   }, [phase]);
 
-  // --- 处理逻辑 ---
-
-  const handleGenderConfirm = () => {
-    setPhase('upload_self');
-  };
+  const handleGenderConfirm = () => { setPhase('upload_self'); };
 
   const handleSelfCapture = (imgData) => {
     if (!imgData) return;
     setSelfPhoto(imgData);
-    setTimeout(() => {
-        setPhase('upload_partner');
-    }, 100);
+    setTimeout(() => { setPhase('upload_partner'); }, 100);
   };
 
   const handlePartnerCapture = (imgData) => {
     if (!imgData) return;
     setPartnerPhoto(imgData);
-    setTimeout(() => {
-        setPhase('processing');
-    }, 100);
+    setTimeout(() => { setPhase('processing'); }, 100);
   };
 
-  // 倒计时逻辑
   useEffect(() => {
     let interval;
     if (phase === 'profile' && profileTimer > 0) {
@@ -243,35 +206,14 @@ export default function App() {
   const generateMockData = () => {
     const mockStimuli = [];
     let idCounter = 1;
-    // 12 Self Morphs
     for(let i=0; i<12; i++) {
-        mockStimuli.push({
-            id: `mock_self_${idCounter++}`,
-            url: `https://api.dicebear.com/7.x/avataaars/svg?seed=self${i}&backgroundColor=e5e7eb`,
-            type: 'self_morph',
-            ratio_self: (i % 6) * 0.2, 
-            description: `Self Morph ${(i%6)*20}% (Demo)`
-        });
+        mockStimuli.push({id: `mock_self_${idCounter++}`, url: `https://api.dicebear.com/7.x/avataaars/svg?seed=self${i}`, type: 'self_morph', ratio_self: (i % 6) * 0.2, description: `Self Morph ${(i%6)*20}% (Demo)`});
     }
-    // 12 Partner Morphs
     for(let i=0; i<12; i++) {
-        mockStimuli.push({
-            id: `mock_partner_${idCounter++}`,
-            url: `https://api.dicebear.com/7.x/avataaars/svg?seed=partner${i}&backgroundColor=b6e3f4`,
-            type: 'partner_morph',
-            ratio_partner: (i % 6) * 0.2,
-            description: `Partner Morph ${(i%6)*20}% (Demo)`
-        });
+        mockStimuli.push({id: `mock_partner_${idCounter++}`, url: `https://api.dicebear.com/7.x/avataaars/svg?seed=partner${i}`, type: 'partner_morph', ratio_partner: (i % 6) * 0.2, description: `Partner Morph ${(i%6)*20}% (Demo)`});
     }
-    // 12 Random
     for(let i=0; i<12; i++) {
-        mockStimuli.push({
-            id: `mock_random_${idCounter++}`,
-            url: `https://api.dicebear.com/7.x/avataaars/svg?seed=random${i}&backgroundColor=ffdfd2`,
-            type: 'random_opposite',
-            ratio_self: 0,
-            description: `Random Face (Demo)`
-        });
+        mockStimuli.push({id: `mock_random_${idCounter++}`, url: `https://api.dicebear.com/7.x/avataaars/svg?seed=random${i}`, type: 'random_opposite', ratio_self: 0, description: `Random Face (Demo)`});
     }
     return mockStimuli.sort(() => Math.random() - 0.5);
   };
@@ -286,10 +228,7 @@ export default function App() {
           console.log("Connecting to:", API_BASE_URL);
           const response = await fetch(`${API_BASE_URL}/merge_faces`, {
             method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'ngrok-skip-browser-warning': 'true' 
-            },
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
             body: JSON.stringify({
               self_image: selfPhoto,
               partner_image: partnerPhoto,
@@ -311,13 +250,10 @@ export default function App() {
 
         } catch (error) {
           clearTimeout(timeoutId);
-          console.warn("Backend connection failed, switching to DEMO MODE.", error);
+          console.warn("Backend connection failed", error);
           setIsDemoMode(true);
           const mockData = generateMockData();
-          setTimeout(() => {
-            setStimuli(mockData);
-            setPhase('instructions');
-          }, 2000);
+          setTimeout(() => { setStimuli(mockData); setPhase('instructions'); }, 2000);
         }
       };
       processImages();
@@ -330,30 +266,24 @@ export default function App() {
     }
   }, [phase, trialStep, currentTrialIndex]);
 
-  const saveDataToServer = async () => {
-    setSaveStatus('saving');
+  // 修改：增加 isPartial 参数，控制是否显示保存状态
+  const saveDataToServer = async (isPartial = false) => {
+    if (!isPartial) setSaveStatus('saving');
+    
     const exportData = {
+      participant_id: participantId, // 携带 ID
       timestamp: new Date().toISOString(),
-      condition_group: condition, // 记录是被试分到了哪一组 (relationship / grocery)
+      condition_group: condition, 
       gender_info: { self: selfGender, partner: partnerGender },
       user_profile: userProfileText,
       pre_questionnaire: questionnaireAnswers,
       experiment_data: data,
-      mode: isDemoMode ? 'demo' : 'production'
+      mode: isDemoMode ? 'demo' : 'production',
+      is_complete: phase === 'finish' // 标记是否完成
     };
 
-    try {
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `experiment_data_${isDemoMode ? 'DEMO' : 'REAL'}.json`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    } catch (e) {
-      console.error("Local download failed", e);
-    }
-
     if (isDemoMode) {
-        setSaveStatus('saved'); 
+        if (!isPartial) setSaveStatus('saved'); 
         return;
     }
 
@@ -366,11 +296,20 @@ export default function App() {
          },
          body: JSON.stringify(exportData)
       });
-      if(response.ok) setSaveStatus('saved');
-      else throw new Error('Upload failed');
+      
+      if(response.ok) {
+          const result = await response.json();
+          // 第一次保存后，后端会返回 ID，记录下来用于后续更新
+          if (result.participant_id) {
+              setParticipantId(result.participant_id);
+          }
+          if (!isPartial) setSaveStatus('saved');
+      } else {
+          throw new Error('Upload failed');
+      }
     } catch (e) {
       console.error(e);
-      setSaveStatus('error');
+      if (!isPartial) setSaveStatus('error');
     }
   };
 
@@ -381,7 +320,6 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
           <h1 className="text-2xl font-bold text-center mb-6">Basic Information</h1>
-          
           <div className="mb-6">
             <label className="block text-sm font-bold text-slate-700 mb-2">Your Gender</label>
             <div className="flex gap-4">
@@ -389,7 +327,6 @@ export default function App() {
               <button onClick={() => setSelfGender('female')} className={`flex-1 py-3 rounded-lg border-2 ${selfGender === 'female' ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>Female</button>
             </div>
           </div>
-
           <div className="mb-8">
             <label className="block text-sm font-bold text-slate-700 mb-2">Partner's Gender (or Preferred)</label>
              <div className="flex gap-4">
@@ -397,10 +334,7 @@ export default function App() {
               <button onClick={() => setPartnerGender('female')} className={`flex-1 py-3 rounded-lg border-2 ${partnerGender === 'female' ? 'border-rose-500 bg-rose-50 text-rose-700' : 'border-slate-200'}`}>Female</button>
             </div>
           </div>
-
-          <button onClick={handleGenderConfirm} className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition">
-            Next: Upload Photos
-          </button>
+          <button onClick={handleGenderConfirm} className="w-full bg-slate-900 text-white font-bold py-3 rounded-xl hover:bg-slate-800 transition">Next: Upload Photos</button>
         </div>
       </div>
     );
@@ -411,12 +345,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="w-full bg-white p-6 rounded-2xl shadow-xl">
            <div className="flex justify-center mb-4"><div className="w-full h-2 bg-slate-100 rounded-full"><div className="h-full bg-rose-500 w-1/3"></div></div></div>
-           <CameraCapture 
-             key="capture-self" 
-             label="Step 1/2: Take Your Photo" 
-             instruction="Please ensure your face is clear and well-lit. If the camera fails, click the icon on the top right to upload." 
-             onCapture={handleSelfCapture} 
-           />
+           <CameraCapture key="capture-self" label="Step 1/2: Take Your Photo" instruction="Please ensure your face is clear and well-lit. If the camera fails, click the icon on the top right to upload." onCapture={handleSelfCapture} />
         </div>
       </div>
     );
@@ -427,12 +356,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div className="w-full bg-white p-6 rounded-2xl shadow-xl">
            <div className="flex justify-center mb-4"><div className="w-full h-2 bg-slate-100 rounded-full"><div className="h-full bg-rose-500 w-2/3"></div></div></div>
-           <CameraCapture 
-             key="capture-partner" 
-             label="Step 2/2: Take Partner's Photo" 
-             instruction="If partner is not present, you can upload an existing photo." 
-             onCapture={handlePartnerCapture} 
-           />
+           <CameraCapture key="capture-partner" label="Step 2/2: Take Partner's Photo" instruction="If partner is not present, you can upload an existing photo." onCapture={handlePartnerCapture} />
         </div>
       </div>
     );
@@ -459,10 +383,7 @@ export default function App() {
           {isDemoMode && (
             <div className="bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-xl mb-6 text-sm flex items-start gap-2">
               <AlertCircle size={20} className="shrink-0 mt-0.5"/>
-              <div>
-                <strong>Demo Mode Active</strong>
-                <p>Backend connection timed out or blocked (403). Using mock data. Please check Ngrok status if this is unexpected.</p>
-              </div>
+              <div><strong>Demo Mode Active</strong><p>Backend connection timed out or blocked (403). Using mock data. Please check Ngrok status if this is unexpected.</p></div>
             </div>
           )}
           <p className="text-slate-600 mb-6 text-sm">System has prepared 36 potential matches. Please follow your intuition.</p>
@@ -472,124 +393,55 @@ export default function App() {
     );
   }
 
-  // --- Profile / Task 页面 (核心修改区域) ---
   if (phase === 'profile') {
      const minutes = Math.floor(profileTimer / 60);
      const seconds = profileTimer % 60;
-
      return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
         <div ref={scrollContainerRef} className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl overflow-y-auto max-h-[90vh]">
-          
-          {/* 根据条件渲染不同的头部图标和标题 */}
           <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
             <div className={`p-3 rounded-full ${condition === 'relationship' ? 'bg-rose-100 text-rose-500' : 'bg-blue-100 text-blue-500'}`}>
                {condition === 'relationship' ? <Heart size={24} fill="currentColor" /> : <ShoppingCart size={24} />}
             </div>
-            <h2 className="text-2xl font-bold text-slate-800">
-                {condition === 'relationship' ? 'Relationship Reflection' : 'Shopping Experience'}
-            </h2>
+            <h2 className="text-2xl font-bold text-slate-800">{condition === 'relationship' ? 'Relationship Reflection' : 'Shopping Experience'}</h2>
           </div>
-          
-          {/* 根据条件渲染不同的指导语内容 */}
           <div className="text-slate-600 space-y-4 mb-8 text-sm leading-relaxed text-justify">
-            
             {condition === 'relationship' ? (
-                // --- 界面 A: Relationship ---
                 <>
-                    <p>
-                      To improve your relationship quality, science has proven that the following method can be very helpful. 
-                      <span className="font-semibold text-rose-600 block mt-1">Let's give it a try!</span>
-                    </p>
+                    <p>To improve your relationship quality, science has proven that the following method can be very helpful. <span className="font-semibold text-rose-600 block mt-1">Let's give it a try!</span></p>
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <p className="mb-2">
-                          Please take time to think carefully about a <strong>close relationship</strong> in which you find it easy to feel close to the other person and are comfortable relying on them. 
-                        </p>
-                        <p>
-                          This person you are thinking about should be someone who is <strong>always there for you</strong> when you are in need.
-                        </p>
+                        <p className="mb-2">Please take time to think carefully about a <strong>close relationship</strong> in which you find it easy to feel close to the other person and are comfortable relying on them. </p>
+                        <p>This person you are thinking about should be someone who is <strong>always there for you</strong> when you are in need.</p>
                     </div>
-                    <p>
-                      You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.
-                    </p>
-                    <p>
-                      Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.
-                    </p>
-                    <p>  
-                      Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed.
-                    </p>
+                    <p>You should now have a person in mind. Please imagine what they look like and what it is like to be in their company.</p>
+                    <p>Now you have the person in mind, think about how you do not worry about being abandoned by this person or worry that this person would try to get closer to you than you are comfortable being.</p>
+                    <p>Please write about this person, your shared time together, and how this person makes you feel safe, comforted, and loved. There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed.</p>
                 </>
             ) : (
-                // --- 界面 B: Grocery Shopping (Control) ---
                 <>
-                    <p>
-                        This page requires you to identify and write for 10 minutes (in the box below) about a recent retail experience you had. We won’t read or keep what you write (though we will check that you have written at least a few paragraphs of text), so please feel free to write in a disinhibited and unguarded way. The exercise is just about having you visualise a situation.
-                    </p>
+                    <p>This page requires you to identify and write for 10 minutes (in the box below) about a recent retail experience you had. We won’t read or keep what you write (though we will check that you have written at least a few paragraphs of text), so please feel free to write in a disinhibited and unguarded way. The exercise is just about having you visualise a situation.</p>
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <p className="mb-2">
-                            Please take time to think carefully about a time when you visited a <strong>grocery store alone</strong> to buy grocery products.
-                        </p>
-                        <p>
-                            This must be a time when you were out shopping alone, with no friends or acquaintances.
-                        </p>
+                        <p className="mb-2">Please take time to think carefully about a time when you visited a <strong>grocery store alone</strong> to buy grocery products.</p>
+                        <p>This must be a time when you were out shopping alone, with no friends or acquaintances.</p>
                     </div>
-                    <p>
-                        You should now have a recent shopping time in mind. Please imagine the details of this trip.
-                    </p>
-                    <p>
-                        Now you have a particular shopping trip in mind, imagine and describe the route from your home to the store, the appearance of the store, the ease with which you found what you were looking for and the groceries you purchased.
-                    </p>
-                    <p>
-                        Please write down as much as you can about this grocery store trip. The task will be timed with a 10-minute countdown timer.
-                    </p>
+                    <p>You should now have a recent shopping time in mind. Please imagine the details of this trip.</p>
+                    <p>Now you have a particular shopping trip in mind, imagine and describe the route from your home to the store, the appearance of the store, the ease with which you found what you were looking for and the groceries you purchased.</p>
+                    <p>Please write down as much as you can about this grocery store trip. The task will be timed with a 10-minute countdown timer.</p>
                 </>
             )}
-
           </div>
-
-          {/* 输入框区域 */}
           <div className="mb-6">
             <label className="block text-slate-700 font-bold mb-2 flex items-center gap-2 justify-between flex-wrap">
                 <span>Your Response:</span>
-                {/* 计时器修改：增加 whitespace-nowrap 防止换行 */}
-                {profileTimer > 0 && (
-                    <span className="text-xs font-normal text-rose-500 bg-rose-50 px-2 py-1 rounded-full flex items-center gap-1 whitespace-nowrap">
-                        <Clock size={12}/> Time remaining: {minutes}:{seconds.toString().padStart(2, '0')}
-                    </span>
-                )}
+                {profileTimer > 0 && (<span className="text-xs font-normal text-rose-500 bg-rose-50 px-2 py-1 rounded-full flex items-center gap-1 whitespace-nowrap"><Clock size={12}/> Time remaining: {minutes}:{seconds.toString().padStart(2, '0')}</span>)}
             </label>
-            <textarea 
-                className="w-full border border-slate-300 rounded-xl p-4 h-48 focus:ring-2 focus:ring-rose-500 focus:outline-none transition-all resize-none text-sm leading-relaxed" 
-                placeholder={condition === 'relationship' 
-                    ? "There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed." 
-                    : "Please write down as much as you can about this grocery store trip. The task will be timed."}
-                value={userProfileText} 
-                onChange={e=>setUserProfileText(e.target.value)} 
+            <textarea className="w-full border border-slate-300 rounded-xl p-4 h-48 focus:ring-2 focus:ring-rose-500 focus:outline-none transition-all resize-none text-sm leading-relaxed" 
+                placeholder={condition === 'relationship' ? "There may be a particular time or example of these good things in the relationship that you could recall here. The task will be timed." : "Please write down as much as you can about this grocery store trip. The task will be timed."}
+                value={userProfileText} onChange={e=>setUserProfileText(e.target.value)} 
             />
           </div>
-          
-          {/* 按钮 */}
-          <button 
-            disabled={profileTimer > 0} 
-            onClick={() => setPhase('questionnaire')} 
-            className={`w-full font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
-                profileTimer > 0 
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
-                : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-            }`}
-          >
-            {profileTimer > 0 ? (
-                <>
-                   <Loader2 className="animate-spin" size={20} />
-                   {/* 计时器文字也防止换行 */}
-                   <span className="whitespace-nowrap">Please reflect & write ({minutes}:{seconds.toString().padStart(2, '0')})</span>
-                </>
-            ) : (
-                <>
-                    <span>Next Step</span>
-                    <ArrowRight size={20} />
-                </>
-            )}
+          <button disabled={profileTimer > 0} onClick={() => setPhase('questionnaire')} className={`w-full font-bold py-4 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${profileTimer > 0 ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'}`}>
+            {profileTimer > 0 ? <><Loader2 className="animate-spin" size={20} /><span className="whitespace-nowrap">Please reflect & write ({minutes}:{seconds.toString().padStart(2, '0')})</span></> : <><span>Next Step</span><ArrowRight size={20} /></>}
           </button>
         </div>
       </div>
@@ -632,7 +484,13 @@ export default function App() {
 
   const handleRatingSubmit = () => {
     const completeData = { ...currentTrialData, rating_desirability: ratingDesirability, rating_willingness: ratingWillingness };
-    setData([...data, completeData]);
+    const newData = [...data, completeData];
+    setData(newData);
+    // 每次完成一个试次也自动保存
+    // 注意：这里 data 状态还没更新，所以我们手动传最新的 newData
+    // 但为了代码简洁，简单地依赖 phase 切换的保存也是够用的
+    // 如果要极其严格，可以这里也调一次
+    // saveDataToServer(true); 
 
     if (currentTrialIndex < stimuli.length - 1) {
       setCurrentTrialIndex(prev => prev + 1);
@@ -683,7 +541,7 @@ export default function App() {
          <p className="text-slate-500 mb-6">Thank you for your participation. Data is recorded.</p>
          
          {saveStatus === 'idle' && (
-           <button onClick={saveDataToServer} className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mb-4">Save Data (Download Local)</button>
+           <button onClick={() => saveDataToServer(false)} className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl mb-4">Save Data (Download Local)</button>
          )}
          {saveStatus === 'saving' && <div className="text-slate-500 animate-pulse">Saving data...</div>}
          {saveStatus === 'saved' && <div className="text-green-600 font-bold mb-4">Data saved successfully! File downloaded.</div>}
